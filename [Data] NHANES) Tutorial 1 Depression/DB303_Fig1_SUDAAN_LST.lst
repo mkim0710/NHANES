@@ -1,0 +1,217 @@
+The SAS System
+
+ 
+ 
+                                  S U D A A N
+            Software for the Statistical Analysis of Correlated Data
+          Copyright      Research Triangle Institute       August 2012
+                          Release 11.0.0 Build 308
+ 
+ 
+DESIGN SUMMARY: Variances will be computed using the Taylor Linearization Method, Assuming a With Replacement (WR) Design
+    Sample Weight: WTMEC4YR
+    Stratification Variables(s): SDMVSTRA
+    Primary Sampling Unit: SDMVPSU
+ 
+ 
+Number of observations read    :  19357    Weighted count :313842630
+Number of observations skipped :    789
+(WEIGHT variable nonpositive)
+Observations in subpopulation  :  11062    Weighted count :231829491
+Denominator degrees of freedom :     30
+ 
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                           Page:  1   
+                                                                                                                                           Table: 1   
+                                                                                                                                                      
+Variance Estimation Method: Taylor Series (WR)                                                                                                        
+For Subpopulation: SELECT = 1                                                                                                                         
+Percentage of adults aged 20 and over with depression, by age and sex: United States, 2013–2016                                                       
+by: Variable, Gender, AGECAT.                                                                                                                         
+                                                                                                                                                      
+for: Variable = DEPRESSION_INDICATOR: 100.                                                                                                            
+                                                                                                                                                      
+-----------------------------------------------------                                                                                                 
+Gender                                                                                                                                                
+   AGECAT              Sample                SE                                                                                                       
+                       Size        Percent   Percent                                                                                                  
+-----------------------------------------------------                                                                                                 
+Total                                                                                                                                                 
+   Total                   9942        8.1        0.4                                                                                                 
+   20-39                   3328        7.7        0.5                                                                                                 
+   40-59                   3307        8.4        0.6                                                                                                 
+   60 and over             3307        8.0        0.8                                                                                                 
+Men                                                                                                                                                   
+   Total                   4821        5.5        0.4                                                                                                 
+   20-39                   1654        5.5        0.6                                                                                                 
+   40-59                   1556        5.2        0.8                                                                                                 
+   60 and over             1611        6.1        0.8                                                                                                 
+Women                                                                                                                                                 
+   Total                   5121       10.4        0.6                                                                                                 
+   20-39                   1674       10.1        0.8                                                                                                 
+   40-59                   1751       11.5        1.2                                                                                                 
+   60 and over             1696        9.6        1.1                                                                                                 
+-----------------------------------------------------                                                                                                 
+The SAS System
+
+ 
+ 
+                                  S U D A A N
+            Software for the Statistical Analysis of Correlated Data
+          Copyright      Research Triangle Institute       August 2012
+                          Release 11.0.0 Build 308
+ 
+ 
+DESIGN SUMMARY: Variances will be computed using the Taylor Linearization Method, Assuming a With Replacement (WR) Design
+    Sample Weight: WTMEC4YR
+    Stratification Variables(s): SDMVSTRA
+    Primary Sampling Unit: SDMVPSU
+ 
+ 
+Number of observations read    :  19357    Weighted count :313842630
+Number of observations skipped :    789
+(WEIGHT variable nonpositive)
+Observations in subpopulation  :  11062    Weighted count :231829491
+Denominator degrees of freedom :     30
+ 
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                           Page:  1   
+                                                                                                                                           Table: 1   
+                                                                                                                                                      
+Variance Estimation Method: Taylor Series (WR)                                                                                                        
+For Subpopulation: SELECT = 1                                                                                                                         
+Percentage of adults aged 20 and over with depression, by age and sex: United States, 2013–2016                                                       
+Alternative method demonstrating the RECODE statement                                                                                                 
+by: Variable, Gender, Age in years at screening.                                                                                                      
+                                                                                                                                                      
+for: Variable = DEPRESSION_SCORE: 1.                                                                                                                  
+                                                                                                                                                      
+-----------------------------------------------------                                                                                                 
+Gender                                                                                                                                                
+   Age in years at     Sample                SE                                                                                                       
+     screening         Size        Percent   Percent                                                                                                  
+-----------------------------------------------------                                                                                                 
+Total                                                                                                                                                 
+   Total                   9942        8.1        0.4                                                                                                 
+   20-39                   3328        7.7        0.5                                                                                                 
+   40-59                   3307        8.4        0.6                                                                                                 
+   60 and over             3307        8.0        0.8                                                                                                 
+Men                                                                                                                                                   
+   Total                   4821        5.5        0.4                                                                                                 
+   20-39                   1654        5.5        0.6                                                                                                 
+   40-59                   1556        5.2        0.8                                                                                                 
+   60 and over             1611        6.1        0.8                                                                                                 
+Women                                                                                                                                                 
+   Total                   5121       10.4        0.6                                                                                                 
+   20-39                   1674       10.1        0.8                                                                                                 
+   40-59                   1751       11.5        1.2                                                                                                 
+   60 and over             1696        9.6        1.1                                                                                                 
+-----------------------------------------------------                                                                                                 
+The SAS System
+
+ 
+ 
+                                  S U D A A N
+            Software for the Statistical Analysis of Correlated Data
+          Copyright      Research Triangle Institute       August 2012
+                          Release 11.0.0 Build 308
+ 
+ 
+DESIGN SUMMARY: Variances will be computed using the Taylor Linearization Method, Assuming a With Replacement (WR) Design
+    Sample Weight: WTMEC4YR
+    Stratification Variables(s): SDMVSTRA
+    Primary Sampling Unit: SDMVPSU
+ 
+ 
+Number of observations read    :  19357    Weighted count :313842630
+Number of observations skipped :    789
+(WEIGHT variable nonpositive)
+Observations in subpopulation  :  11062    Weighted count :231829491
+Denominator degrees of freedom :     30
+ 
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                           Page:  1   
+                                                                                                                                           Table: 1   
+                                                                                                                                                      
+Variance Estimation Method: Taylor Series (WR)                                                                                                        
+For Subpopulation: SELECT = 1                                                                                                                         
+Test for differences between men and women: Percentage of adults aged 20 and over with depression, by age and sex: United States, 2013–2016           
+by: Variable, AGECAT, Contrast.                                                                                                                       
+                                                                                                                                                      
+for: Variable = DEPRESSION_INDICATOR: 100.                                                                                                            
+                                                                                                                                                      
+---------------------------------------------------------------                                                                                       
+AGECAT                                                 P-value                                                                                        
+   Contrast                                            T-Test                                                                                         
+                               Sample     T-Test       Cont.Pc-                                                                                       
+                               Size       Cont.Pct=0   t=0                                                                                            
+---------------------------------------------------------------                                                                                       
+Total                                                                                                                                                 
+   CONTRAST_1: (Men,Women)         9942        -6.82     0.0000                                                                                       
+20-39                                                                                                                                                 
+   CONTRAST_1: (Men,Women)         3328        -4.46     0.0001                                                                                       
+40-59                                                                                                                                                 
+   CONTRAST_1: (Men,Women)         3307        -3.87     0.0005                                                                                       
+60 and over                                                                                                                                           
+   CONTRAST_1: (Men,Women)         3307        -3.13     0.0039                                                                                       
+---------------------------------------------------------------                                                                                       
+The SAS System
+
+ 
+ 
+                                  S U D A A N
+            Software for the Statistical Analysis of Correlated Data
+          Copyright      Research Triangle Institute       August 2012
+                          Release 11.0.0 Build 308
+ 
+ 
+DESIGN SUMMARY: Variances will be computed using the Taylor Linearization Method, Assuming a With Replacement (WR) Design
+    Sample Weight: WTMEC4YR
+    Stratification Variables(s): SDMVSTRA
+    Primary Sampling Unit: SDMVPSU
+ 
+ 
+Number of observations read    :  19357    Weighted count :313842630
+Number of observations skipped :    789
+(WEIGHT variable nonpositive)
+Observations in subpopulation  :  11062    Weighted count :231829491
+Denominator degrees of freedom :     30
+ 
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+Date: 05-06-2019                                                        SUDAAN                                                             Page:  1   
+Time: 13:35:15                                                                                                                             Table: 1   
+                                                                                                                                                      
+Variance Estimation Method: Taylor Series (WR)                                                                                                        
+For Subpopulation: SELECT = 1                                                                                                                         
+Test for differences between age groups: Percentage of adults aged 20 and over with depression, by age and sex: United States, 2013–2016              
+by: Variable, Gender, Contrast.                                                                                                                       
+                                                                                                                                                      
+for: Variable = DEPRESSION_INDICATOR: 100.                                                                                                            
+                                                                                                                                                      
+---------------------------------------------------------------------                                                                                 
+Gender                                                       P-value                                                                                  
+   Contrast                                                  T-Test                                                                                   
+                                     Sample     T-Test       Cont.Pc-                                                                                 
+                                     Size       Cont.Pct=0   t=0                                                                                      
+---------------------------------------------------------------------                                                                                 
+Total                                                                                                                                                 
+   CONTRAST_1: (20-39,40-59)             6635        -0.79     0.4334                                                                                 
+   CONTRAST_1: (20-39,60 and over)       6635        -0.22     0.8245                                                                                 
+   CONTRAST_1: (40-59,60 and over)       6614         0.53     0.6000                                                                                 
+Men                                                                                                                                                   
+   CONTRAST_1: (20-39,40-59)             3210         0.27     0.7927                                                                                 
+   CONTRAST_1: (20-39,60 and over)       3265        -0.54     0.5937                                                                                 
+   CONTRAST_1: (40-59,60 and over)       3167        -0.79     0.4338                                                                                 
+Women                                                                                                                                                 
+   CONTRAST_1: (20-39,40-59)             3425        -0.95     0.3505                                                                                 
+   CONTRAST_1: (20-39,60 and over)       3370         0.32     0.7530                                                                                 
+   CONTRAST_1: (40-59,60 and over)       3447         1.25     0.2199                                                                                 
+---------------------------------------------------------------------                                                                                 

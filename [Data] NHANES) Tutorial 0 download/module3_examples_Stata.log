@@ -1,0 +1,430 @@
+. ***************************************************************************
+. ** Module 3 examples - Stata code                                         *
+. ** Examples illustrating the over-sampling of some demographic            * 
+. * groups and demonstrating the importance of using weights in analyses    *
+. ***************************************************************************
+. ** Note to tutorial users: you must update some lines of code (e.g. file paths) 
+. **    to run this code yourself. Search for comments labeled "TutorialUser"
+. 
+. 
+. * Change working directory to a directory where we can save temporary files *
+. * TutorialUser: Update this path to a valid location on your computer!
+. cd "C:\Stata_workspace\"
+C:\Stata_workspace
+
+. 
+. *******************************************************************
+. ** Download data files from NHANES website and import into Stata **
+. *******************************************************************
+. 
+. * DEMO demographic *
+. import sasxport "https://wwwn.cdc.gov/Nchs/Nhanes/2015-2016/DEMO_I.XPT", clear
+
+. save "DEMO_I.dta", replace
+file DEMO_I.dta saved
+
+. 
+. * BPX blood pressure exam *
+. import sasxport "https://wwwn.cdc.gov/Nchs/Nhanes/2015-2016/BPX_I.XPT", clear
+
+. save "BPX_I.dta", replace
+file BPX_I.dta saved
+
+. 
+. * BPQ blood pressure questionnaire *
+. import sasxport "https://wwwn.cdc.gov/Nchs/Nhanes/2015-2016/BPQ_I.XPT", clear
+
+. save "BPQ_I.dta", replace
+file BPQ_I.dta saved
+
+. 
+. **********************
+. ** Merge data files **
+. **********************
+. use "DEMO_I.dta", clear
+
+. merge 1:1 seqn using "BPX_I.dta", nogenerate keepusing(seqn bpxsy1-bpxsy4 bpxdi1-bpxdi4)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                           427
+        from master                       427  
+        from using                          0  
+
+    matched                             9,544  
+    -----------------------------------------
+
+. merge 1:1 seqn using "BPQ_I.dta", nogenerate keepusing(seqn bpq050a)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                         3,644
+        from master                     3,644  
+        from using                          0  
+
+    matched                             6,327  
+    -----------------------------------------
+
+. 
+. *********************************
+. ** Generate analysis variables **
+. *********************************
+. **Hypertension prevalence**
+. ** Count Number of Nonmissing SBPs & DBPs **
+. egen n_sbp=rownonmiss( bpxsy1 bpxsy2 bpxsy3 bpxsy4)
+
+. egen n_dbp=rownonmiss( bpxdi1 bpxdi2 bpxdi3 bpxdi4)
+
+. 
+. ** Set DBP Values Of 0 To Missing For Calculating Average **
+. mvdecode bpxdi1-bpxdi4, mv(0)
+      bpxdi1: 58 missing values generated
+      bpxdi2: 66 missing values generated
+      bpxdi3: 77 missing values generated
+      bpxdi4: 8 missing values generated
+
+. 
+. ** Calculate Mean Systolic and Diastolic (over non-missing values) **
+. egen mean_sbp=rowmean(bpxsy1 bpxsy2 bpxsy3 bpxsy4)
+(2608 missing values generated)
+
+. egen mean_dbp=rowmean(bpxdi1 bpxdi2 bpxdi3 bpxdi4)
+(2636 missing values generated)
+
+. 
+. ** Create 0/100 indicator for Hypertension **
+. * "Old" Hypertensive Category variable: taking medication or measured BP > 140/90 *
+. * as used in NCHS Data Brief No. 289 *
+. * variable bpq050a: now taking prescribed medicine for hypertension, 1 = yes *
+. * need to explicitly check that mean_dbp is not missing because missing values are representated as large values ("positive infinity") in Stata *
+. gen HTN_old=100 if ( (mean_sbp>=140 & !missing(mean_sbp)) | (mean_dbp >= 90 & !missing(mean_dbp))| bpq050a == 1) 
+(7,890 missing values generated)
+
+. replace HTN_old = 0 if  (HTN_old==. & n_sbp > 0 & n_dbp > 0)
+(5,375 real changes made)
+
+. label define htnLabel 0 "No" 100 "Yes"
+
+. label values HTN_old htnLabel
+
+. 
+. /*
+> ** For reference: "new" definition of hypertension prevalence, based on taking medication or measured BP > 130/80 **
+> ** From 2017 ACC/AHA hypertension guidelines **
+> * Not used in Data Brief No. 289 - provided for reference *
+> gen HTN_new=100 if ( (mean_sbp>=130 & !missing(mean_sbp)) | (mean_dbp >= 80 & !missing(mean_dbp)) | bpq050a == 1) 
+> replace HTN_new = 0 if  (missing(HTN_new) & n_sbp > 0 & n_dbp > 0)
+> */
+. 
+. * Create race and Hispanic ethnicity categories for oversampling analysis *
+. * combined Non-Hispanic white and Non-Hispanic other and multiple races, to approximate the sampling domains *
+. recode ridreth3 (3 7 = 4) (4 = 1) (1/2=3) (6 = 2), generate(race1)
+(9971 differences between ridreth3 and race1)
+
+. label define racelabels1 1 "Non-Hispanic black" 2 "Non-Hispanic Asian" 3"Hispanic" 4 "Non-Hispanic white and other"
+
+. label values race1 racelabels1
+
+. 
+. * Create race and Hispanic ethnicity categories for hypertension analysis *
+. recode ridreth3 (3 = 1) (4 = 2) (1/2=4) (6=3) (7 = 5), generate(raceEthCat)
+(9971 differences between ridreth3 and raceEthCat)
+
+. label define raceEthnicity_Labels 1 "Non-Hispanic white" 2 "Non-Hispanic black" 3"Non-Hispanic Asian" 4 "Hispanic" 5 "NH other race or multiple race
+> s"
+
+. label values raceEthCat raceEthnicity_Labels
+
+. 
+. * Create age categories for adults aged 18 and over: ages 18-39, 40-59, 60 and over *
+. recode ridageyr (0/17 = .) (18/39 = 1) (40/59 = 2) (60/80 = 3), generate(ageCat_18)
+(9971 differences between ridageyr and ageCat_18)
+
+. label define Age_Labels 1 "18-39" 2 "40-59" 3 "60 and over"
+
+. label values ageCat_18 Age_Labels
+
+. 
+. * Define subpopulation of interest: non-pregnant adults aged 18 and over who have at least 1 valid systolic OR diastolic BP measure *
+. generate inAnalysis = 1 if (ridageyr >=18 & ridexprg ~= 1 & (n_sbp > 0 | n_dbp > 0))
+(4,467 missing values generated)
+
+. 
+. 
+. **********************************************************************************************
+. ** Estimates for graph - Distribution of race and Hispanic origin, NHANES 2015-2016          *
+. * Module 3, Examples Demonstrating the Importance of Using Weights in Your Analyses          *
+. * Section "Adjusting for oversampling"                                                       *
+. **********************************************************************************************
+. 
+. * Proportion of unweighted interview sample *
+. tab race1
+
+          RECODE of ridreth3 |
+ (Race/Hispanic origin w/ NH |
+                      Asian) |      Freq.     Percent        Cum.
+-----------------------------+-----------------------------------
+          Non-Hispanic black |      2,129       21.35       21.35
+          Non-Hispanic Asian |      1,042       10.45       31.80
+                    Hispanic |      3,229       32.38       64.19
+Non-Hispanic white and other |      3,571       35.81      100.00
+-----------------------------+-----------------------------------
+                       Total |      9,971      100.00
+
+. 
+. * Proportion, weighted with interview weight *
+. tab race1 [iweight=wtint2yr]
+
+          RECODE of ridreth3 |
+ (Race/Hispanic origin w/ NH |
+                      Asian) |      Freq.     Percent        Cum.
+-----------------------------+-----------------------------------
+          Non-Hispanic black | 37789476.7       11.94       11.94
+          Non-Hispanic Asian | 17701705.7        5.59       17.53
+                    Hispanic | 55,750,392       17.62       35.15
+Non-Hispanic white and other |205,239,470       64.85      100.00
+-----------------------------+-----------------------------------
+                       Total |316,481,044      100.00
+
+. 
+. * Proportion of US population *
+. * Input population totals from the American Community Survey, 2015-2016 *
+. * available on the NHANES website: https://wwwn.cdc.gov/nchs/nhanes/responserates.aspx#population-totals *
+. * counts from tab "Both" (for both genders), total row (for all ages) *
+. 
+. scalar NH_White_Other=194849491+10444206
+
+. scalar NH_Black=38418696
+
+. scalar NH_Asian=17018259
+
+. scalar Hispanic=55750392
+
+. scalar acsTotal= NH_White_Other + NH_Black + NH_Asian + Hispanic
+
+. 
+. * use display command as a "hand calculator" to display the proportion comprised by each group *
+. foreach group in NH_Black NH_Asian Hispanic NH_White_Other {
+  2.         display "`group' " %5.1f `group'/acsTotal*100
+  3. }
+NH_Black  12.1
+NH_Asian   5.4
+Hispanic  17.6
+NH_White_Other  64.9
+
+. 
+. 
+. **********************************************************************************************
+. ** Comparison of weighted and unweighed estimates for hypertension, NHANES 2015-2016         *
+. * Module 3, Examples Demonstrating the Importance of Using Weights in Your Analyses          *
+. * Section "Why weight?"                                                                      *
+. **********************************************************************************************
+. 
+. ** Prevalence of hypertension among adults aged 18 and over, overall and by race and Hispanic origin group **
+. 
+. * Unweighted estimate - for adults aged 18 and over *
+. tab HTN_old if inAnalysis==1
+
+    HTN_old |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         No |      3,526       64.06       64.06
+        Yes |      1,978       35.94      100.00
+------------+-----------------------------------
+      Total |      5,504      100.00
+
+. 
+. * Unweighted estimate - for adults aged 18 and over, by race and Hispanic origin *
+. tab raceEthCat HTN_old if inAnalysis==1 , row 
+
++----------------+
+| Key            |
+|----------------|
+|   frequency    |
+| row percentage |
++----------------+
+
+   RECODE of ridreth3 |
+(Race/Hispanic origin |        HTN_old
+         w/ NH Asian) |        No        Yes |     Total
+----------------------+----------------------+----------
+   Non-Hispanic white |     1,127        663 |     1,790 
+                      |     62.96      37.04 |    100.00 
+----------------------+----------------------+----------
+   Non-Hispanic black |       651        522 |     1,173 
+                      |     55.50      44.50 |    100.00 
+----------------------+----------------------+----------
+   Non-Hispanic Asian |       478        155 |       633 
+                      |     75.51      24.49 |    100.00 
+----------------------+----------------------+----------
+             Hispanic |     1,134        568 |     1,702 
+                      |     66.63      33.37 |    100.00 
+----------------------+----------------------+----------
+NH other race or mult |       136         70 |       206 
+                      |     66.02      33.98 |    100.00 
+----------------------+----------------------+----------
+                Total |     3,526      1,978 |     5,504 
+                      |     64.06      35.94 |    100.00 
+
+
+. 
+. * Weighted estimates * 
+. 
+. *** WARNING ***
+. * The following commands using the tab statement are intended to demonstrate the importance of using the sample weight in your analyses.
+. * The weighted estimate produces the correct POINT ESTIMATES for the prevalence of hypertension.
+. * However, your analysis must account for the complex survey design of NHANES (e.g. stratification and clustering), 
+. *   in order to produce correct STANDARD ERRORS (and confidence intervals, statistical tests, etc.).
+. * Do NOT use this step as a model for producing your own analyses!
+. * See the Continuous NHANES tutorial Module 4: Variance Estimation for a complete explanation of how to properly account 
+. *    for the complex survey design using Stata survey commands with the svy: prefix
+. 
+. * Weighted estimates - for adults aged 18 and over *
+. tab HTN_old [iweight=wtmec2yr] if inAnalysis==1
+
+    HTN_old |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         No |157,282,343       67.90       67.90
+        Yes | 74367918.9       32.10      100.00
+------------+-----------------------------------
+      Total |231,650,262      100.00
+
+. 
+. * Weighted estimates - for adults aged 18 and over, by race and Hispanic origin *
+. tab raceEthCat HTN_old  [iweight=wtmec2yr] if inAnalysis==1 , row
+
++----------------+
+| Key            |
+|----------------|
+|   frequency    |
+| row percentage |
++----------------+
+
+   RECODE of ridreth3 |
+(Race/Hispanic origin |        HTN_old
+         w/ NH Asian) |        No        Yes |     Total
+----------------------+----------------------+----------
+   Non-Hispanic white |  98759626   49424637 | 1.482e+08 
+                      |     66.65      33.35 |    100.00 
+----------------------+----------------------+----------
+   Non-Hispanic black |  15749707   10547537 |  26297244 
+                      |     59.89      40.11 |    100.00 
+----------------------+----------------------+----------
+   Non-Hispanic Asian | 9811518.8  3204811.7 |  13016331 
+                      |     75.38      24.62 |    100.00 
+----------------------+----------------------+----------
+             Hispanic |  27484398  8264623.5 |  35749022 
+                      |     76.88      23.12 |    100.00 
+----------------------+----------------------+----------
+NH other race or mult | 5477093.3  2926309.4 | 8403402.7 
+                      |     65.18      34.82 |    100.00 
+----------------------+----------------------+----------
+                Total | 1.573e+08 74367918.9 | 231650262 
+                      |     67.90      32.10 |    100.00 
+
+
+. 
+. ** Code using Stata svy commands to estimate the prevalence of hypertension, with correct standard errors) ** 
+. * See Module 4: Variance Estimation for details *
+. svyset [w=wtmec2yr], psu(sdmvpsu) strata(sdmvstra) vce(linearized)
+(sampling weights assumed)
+
+      pweight: wtmec2yr
+          VCE: linearized
+  Single unit: missing
+     Strata 1: sdmvstra
+         SU 1: sdmvpsu
+        FPC 1: <zero>
+
+. * overall adults aged 18 and over *
+. svy, subpop(inAnalysis): mean HTN_old , cformat(%5.1f)
+(running mean on estimation sample)
+
+Survey: Mean estimation
+
+Number of strata =      15      Number of obs   =        5,504
+Number of PSUs   =      30      Population size =  231,650,262
+                                Subpop. no. obs =        5,504
+                                Subpop. size    =  231,650,262
+                                Design df       =           15
+
+--------------------------------------------------------------
+             |             Linearized
+             |       Mean   Std. Err.     [95% Conf. Interval]
+-------------+------------------------------------------------
+     HTN_old |       32.1        1.2          29.5        34.7
+--------------------------------------------------------------
+
+. * adults aged 18 and over, by race and Hispanic origin *
+. svy, subpop(inAnalysis): mean HTN_old , over(raceEthCat) cformat(%5.1f)
+(running mean on estimation sample)
+
+Survey: Mean estimation
+
+Number of strata =      15      Number of obs   =        5,504
+Number of PSUs   =      30      Population size =  231,650,262
+                                Subpop. no. obs =        5,504
+                                Subpop. size    =  231,650,262
+                                Design df       =           15
+
+    _subpop_1: raceEthCat = Non-Hispanic white
+    _subpop_2: raceEthCat = Non-Hispanic black
+    _subpop_3: raceEthCat = Non-Hispanic Asian
+     Hispanic: raceEthCat = Hispanic
+    _subpop_5: raceEthCat = NH other race or multiple races
+
+--------------------------------------------------------------
+             |             Linearized
+        Over |       Mean   Std. Err.     [95% Conf. Interval]
+-------------+------------------------------------------------
+HTN_old      |
+   _subpop_1 |       33.4        1.6          29.9        36.8
+   _subpop_2 |       40.1        2.1          35.7        44.5
+   _subpop_3 |       24.6        2.7          18.9        30.3
+    Hispanic |       23.1        2.3          18.3        28.0
+   _subpop_5 |       34.8        5.1          23.9        45.8
+--------------------------------------------------------------
+
+. 
+. 
+. ************************
+. 
+. ** Age distribution among Hispanic adults, weighted and unweighted **
+. * statement in tutorial text that the unweighted estimate over-represents Hispanic adults aged 60 and over,
+. *  compared with their actual share of the Hispanic adult population *
+. 
+. * Unweighted age distribution among Hispanic adults in the analysis  *
+. tab ageCat_18 if inAnalysis==1 & raceEthCat==4
+
+  RECODE of |
+   ridageyr |
+    (Age in |
+   years at |
+ screening) |      Freq.     Percent        Cum.
+------------+-----------------------------------
+      18-39 |        628       36.90       36.90
+      40-59 |        517       30.38       67.27
+60 and over |        557       32.73      100.00
+------------+-----------------------------------
+      Total |      1,702      100.00
+
+. * Unweighted, Hispanic adults aged 60 and over comprise 33% of Hispanic adults in the analysis sample. *
+. 
+. * weighted age distribution among Hispanic adults in the analysis population *
+. tab ageCat_18 [iweight=wtmec2yr] if inAnalysis==1 & raceEthCat==4
+
+  RECODE of |
+   ridageyr |
+    (Age in |
+   years at |
+ screening) |      Freq.     Percent        Cum.
+------------+-----------------------------------
+      18-39 | 17906013.6       50.09       50.09
+      40-59 | 12403266.4       34.70       84.78
+60 and over |  5,439,742       15.22      100.00
+------------+-----------------------------------
+      Total | 35749021.8      100.00
+
+. * When properly weighted, Hispanic adults aged 60 and over comprise 15% of Hispanic adults in the US non-institutionalized civilian population * 
+. 
+. 
+end of do-file

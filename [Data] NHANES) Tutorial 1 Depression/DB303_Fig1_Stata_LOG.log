@@ -1,0 +1,506 @@
+﻿. **********************************************************************************************************************
+. ** Example Stata code to replicate NCHS Data Brief No. 303, Figure 1                                                **
+. ** Figure 1.  Percentage of persons aged 20 and over with depression, by age and sex: United States, 2013–2016      **
+. **                                                                                                                  **
+. ** Brody DJ, Pratt LA, Hughes J. Prevalence of depression among adults aged 20 and over: United States, 2013–2016.  **
+. ** NCHS Data Brief, no 303. Hyattsville, MD: National Center for Health Statistics. 2018.                           **
+. **********************************************************************************************************************
+. ** Note to tutorial users: you must update some lines of code (e.g. file paths) 
+. **    to run this code yourself. Search for comments labeled "TutorialUser"
+. 
+. 
+. ** Display Stata Version Number **
+. version
+version 15.0
+
+. 
+. * Change working directory to a directory where we can save temporary files *
+. * TutorialUser: Update this path to a valid location on your computer!
+. cd "C:\Stata_workspace\"
+C:\Stata_workspace
+
+. 
+. ** Download Demographic (DEMO) Data and Keep Variables Of Interest **
+. import sasxport "https://wwwn.cdc.gov/Nchs/Nhanes/2013-2014/DEMO_H.XPT", clear
+
+. keep seqn riagendr ridageyr sdmvstra sdmvpsu wtmec2yr
+
+. save "DEMO_H.dta", replace
+file DEMO_H.dta saved
+
+. 
+. import sasxport "https://wwwn.cdc.gov/Nchs/Nhanes/2015-2016/DEMO_I.XPT", clear
+
+. keep seqn riagendr ridageyr sdmvstra sdmvpsu wtmec2yr
+
+. 
+. ** Append Files **
+. append using "DEMO_H.dta"
+
+. save "DEMO.dta", replace
+file DEMO.dta saved
+
+. 
+. ** Download Mental Health - Depression Screener (DPQ) Data **
+. import sasxport "https://wwwn.cdc.gov/Nchs/Nhanes/2013-2014/DPQ_H.XPT", clear
+
+. save "DPQ_H.dta", replace
+file DPQ_H.dta saved
+
+. 
+. import sasxport "https://wwwn.cdc.gov/Nchs/Nhanes/2015-2016/DPQ_I.XPT", clear
+
+. 
+. ** Append Files **
+. append using "DPQ_H.dta"
+
+. 
+. ** Merge Files **
+. merge 1:1 seqn using "DEMO.dta"
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                         8,487
+        from master                         0  (_merge==1)
+        from using                      8,487  (_merge==2)
+
+    matched                            11,659  (_merge==3)
+    -----------------------------------------
+
+. 
+. ** Set Refused/Don't Know To Missing (for all variables that start with prefix dpq) **
+. recode dpq* (7/9 = .)
+(dpq010: 19 changes made)
+(dpq020: 9 changes made)
+(dpq030: 4 changes made)
+(dpq040: 2 changes made)
+(dpq050: 6 changes made)
+(dpq060: 7 changes made)
+(dpq070: 5 changes made)
+(dpq080: 6 changes made)
+(dpq090: 7 changes made)
+(dpq100: 5 changes made)
+
+. 
+. ** Create Binary Depression Indicator as 0/100 variable **
+. ** note that the score will be missing if any of the items are missing **
+. gen Depression_Score = dpq010+dpq020+dpq030+dpq040+dpq050+dpq060+dpq070+dpq080+dpq090
+(9,640 missing values generated)
+
+. recode Depression_Score (0/9 = 0) (10/27 = 100), generate(Depression_Indicator)
+(7217 differences between Depression_Score and Depression_Indicator)
+
+. 
+. ** Create a new variable with age categories: 20-39, 40-59, 60 and over ** 
+. recode ridageyr (0/19 = .) (20/39 = 1) (40/59 = 2) (60/80 = 3), generate(Age_Group)
+(20146 differences between ridageyr and Age_Group)
+
+. 
+. ** Labels for categorized variables **
+. label define Gender_Labels 1 "Male" 2 "Female"
+
+. label values riagendr Gender_Labels
+
+. label define Age_Labels 1 "20-39" 2 "40-59" 3 "60+"
+
+. label values Age_Group Age_Labels
+
+. 
+. ** Define analysis population: adults age 20 and over with a non-missing depression score
+. gen inAnalysis=0
+
+. replace inAnalysis=1 if ridageyr >=20 & !missing(Depression_Indicator)
+(9,942 real changes made)
+
+. 
+. ** Specify survey design variables and request Taylor linearized variance estimation **
+. ** Note: using the MEC Exam Weights (WTMEC2YR), per the analytic notes on the 
+. **       Mental Health - Depression Screener (DPQ_H) documentation
+. **  Divide weight by 2 because we are appending 2 survey cycles for 2013-2014 and 2015-2016
+. gen wtmec4yr = wtmec2yr / 2
+
+. svyset [w=wtmec4yr], psu(sdmvpsu) strata(sdmvstra) vce(linearized)
+(sampling weights assumed)
+
+      pweight: wtmec4yr
+          VCE: linearized
+  Single unit: missing
+     Strata 1: sdmvstra
+         SU 1: sdmvpsu
+        FPC 1: <zero>
+
+. 
+. ** Sample Size (unweighted) by sex and age for analysis population **
+. tab riagendr Age_Group if inAnalysis
+
+           | RECODE of ridageyr (Age in years
+           |          at screening)
+    Gender |     20-39      40-59        60+ |     Total
+-----------+---------------------------------+----------
+      Male |     1,654      1,556      1,611 |     4,821 
+    Female |     1,674      1,751      1,696 |     5,121 
+-----------+---------------------------------+----------
+     Total |     3,328      3,307      3,307 |     9,942 
+
+
+. 
+. ** Prevalence of depression **
+. svy, subpop(inAnalysis): mean Depression_Indicator
+(running mean on estimation sample)
+
+Survey: Mean estimation
+
+Number of strata =      30      Number of obs   =       20,146
+Number of PSUs   =      60      Population size =  313,842,630
+                                Subpop. no. obs =        9,942
+                                Subpop. size    =  212,597,653
+                                Design df       =           30
+
+----------------------------------------------------------------------
+                     |             Linearized
+                     |       Mean   Std. Err.     [95% Conf. Interval]
+---------------------+------------------------------------------------
+Depression_Indicator |   8.056844   .3599895      7.321648    8.792041
+----------------------------------------------------------------------
+
+. 
+. ** Prevalence of depression by gender **
+. svy, subpop(inAnalysis): mean Depression_Indicator, over(riagendr)
+(running mean on estimation sample)
+
+Survey: Mean estimation
+
+Number of strata =      30      Number of obs   =       20,146
+Number of PSUs   =      60      Population size =  313,842,630
+                                Subpop. no. obs =        9,942
+                                Subpop. size    =  212,597,653
+                                Design df       =           30
+
+         Male: riagendr = Male
+       Female: riagendr = Female
+
+----------------------------------------------------------------------
+                     |             Linearized
+                Over |       Mean   Std. Err.     [95% Conf. Interval]
+---------------------+------------------------------------------------
+Depression_Indicator |
+                Male |   5.549344   .4293217      4.672553    6.426136
+              Female |   10.42765   .5658239      9.272088    11.58322
+----------------------------------------------------------------------
+
+. ** Compare prevalence of depression between men and women **
+. lincom [Depression_Indicator]Male - [Depression_Indicator]Female
+
+ ( 1)  [Depression_Indicator]Male - [Depression_Indicator]Female = 0
+
+------------------------------------------------------------------------------
+        Mean |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |   -4.87831   .7148129    -6.82   0.000    -6.338153   -3.418467
+------------------------------------------------------------------------------
+
+. 
+. ** Prevalence of depression by age group **
+. svy, subpop(inAnalysis): mean Depression_Indicator, over(Age_Group)
+(running mean on estimation sample)
+
+Survey: Mean estimation
+
+Number of strata =      30      Number of obs   =       20,146
+Number of PSUs   =      60      Population size =  313,842,630
+                                Subpop. no. obs =        9,942
+                                Subpop. size    =  212,597,653
+                                Design df       =           30
+
+    _subpop_1: Age_Group = 20-39
+    _subpop_2: Age_Group = 40-59
+    _subpop_3: Age_Group = 60+
+
+----------------------------------------------------------------------
+                     |             Linearized
+                Over |       Mean   Std. Err.     [95% Conf. Interval]
+---------------------+------------------------------------------------
+Depression_Indicator |
+           _subpop_1 |   7.744613   .5236944      6.675087     8.81414
+           _subpop_2 |   8.429826   .6164284      7.170912    9.688741
+           _subpop_3 |   7.971216   .7797954      6.378661     9.56377
+----------------------------------------------------------------------
+
+. ** Pairwise Comparison Of Age Groups **
+. lincom [Depression_Indicator]_subpop_1 - [Depression_Indicator]_subpop_2  // 20-39 vs. 40-59
+
+ ( 1)  [Depression_Indicator]_subpop_1 - [Depression_Indicator]_subpop_2 = 0
+
+------------------------------------------------------------------------------
+        Mean |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |  -.6852129   .8630077    -0.79   0.433     -2.44771    1.077284
+------------------------------------------------------------------------------
+
+. lincom [Depression_Indicator]_subpop_1 - [Depression_Indicator]_subpop_3  // 20-39 vs. 60 and over
+
+ ( 1)  [Depression_Indicator]_subpop_1 - [Depression_Indicator]_subpop_3 = 0
+
+------------------------------------------------------------------------------
+        Mean |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |  -.2266021   1.013058    -0.22   0.825    -2.295543    1.842339
+------------------------------------------------------------------------------
+
+. lincom [Depression_Indicator]_subpop_2 - [Depression_Indicator]_subpop_3  // 40-59 vs. 60 and over
+
+ ( 1)  [Depression_Indicator]_subpop_2 - [Depression_Indicator]_subpop_3 = 0
+
+------------------------------------------------------------------------------
+        Mean |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |   .4586108   .8653475     0.53   0.600    -1.308664    2.225886
+------------------------------------------------------------------------------
+
+. 
+. ** Prevalence By Gender And Age Group **
+. svy, subpop(inAnalysis): mean Depression_Indicator, over(riagendr Age_Group)
+(running mean on estimation sample)
+
+Survey: Mean estimation
+
+Number of strata =      30      Number of obs   =       20,146
+Number of PSUs   =      60      Population size =  313,842,630
+                                Subpop. no. obs =        9,942
+                                Subpop. size    =  212,597,653
+                                Design df       =           30
+
+         Over: riagendr Age_Group
+    _subpop_1: Male 20-39
+    _subpop_2: Male 40-59
+    _subpop_3: Male 60+
+    _subpop_4: Female 20-39
+    _subpop_5: Female 40-59
+    _subpop_6: Female 60+
+
+----------------------------------------------------------------------
+                     |             Linearized
+                Over |       Mean   Std. Err.     [95% Conf. Interval]
+---------------------+------------------------------------------------
+Depression_Indicator |
+           _subpop_1 |   5.513778   .6461045      4.194256    6.833299
+           _subpop_2 |    5.22206   .7699895      3.649532    6.794589
+           _subpop_3 |   6.052782   .8295114      4.358693     7.74687
+           _subpop_4 |   10.05032   .8036891      8.408969    11.69167
+           _subpop_5 |   11.47724   1.201136      9.024191    13.93029
+           _subpop_6 |   9.579923   1.053411       7.42857    11.73128
+----------------------------------------------------------------------
+
+. ** Compare Prevalence Between Men And Women By Age Group **
+. lincom [Depression_Indicator]_subpop_1 - [Depression_Indicator]_subpop_4 // men vs. women: aged 20-39
+
+ ( 1)  [Depression_Indicator]_subpop_1 - [Depression_Indicator]_subpop_4 = 0
+
+------------------------------------------------------------------------------
+        Mean |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |  -4.536543   1.016958    -4.46   0.000    -6.613449   -2.459638
+------------------------------------------------------------------------------
+
+. lincom [Depression_Indicator]_subpop_2 - [Depression_Indicator]_subpop_5 // men vs. women: aged 40-59
+
+ ( 1)  [Depression_Indicator]_subpop_2 - [Depression_Indicator]_subpop_5 = 0
+
+------------------------------------------------------------------------------
+        Mean |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |  -6.255178   1.616821    -3.87   0.001    -9.557168   -2.953189
+------------------------------------------------------------------------------
+
+. lincom [Depression_Indicator]_subpop_3 - [Depression_Indicator]_subpop_6 // men vs. women: aged 60 and over
+
+ ( 1)  [Depression_Indicator]_subpop_3 - [Depression_Indicator]_subpop_6 = 0
+
+------------------------------------------------------------------------------
+        Mean |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |  -3.527141   1.127535    -3.13   0.004    -5.829875   -1.224408
+------------------------------------------------------------------------------
+
+. ** Pairwise Comparison of Age Groups By Gender **
+. lincom [Depression_Indicator]_subpop_1 - [Depression_Indicator]_subpop_2 // 20-39 vs. 40-59       : men
+
+ ( 1)  [Depression_Indicator]_subpop_1 - [Depression_Indicator]_subpop_2 = 0
+
+------------------------------------------------------------------------------
+        Mean |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |   .2917174   1.100145     0.27   0.793    -1.955078    2.538513
+------------------------------------------------------------------------------
+
+. lincom [Depression_Indicator]_subpop_1 - [Depression_Indicator]_subpop_3 // 20-39 vs. 60 and over : men
+
+ ( 1)  [Depression_Indicator]_subpop_1 - [Depression_Indicator]_subpop_3 = 0
+
+------------------------------------------------------------------------------
+        Mean |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |  -.5390041   .9994691    -0.54   0.594    -2.580192    1.502184
+------------------------------------------------------------------------------
+
+. lincom [Depression_Indicator]_subpop_2 - [Depression_Indicator]_subpop_3 // 40-59 vs. 60 and over : men
+
+ ( 1)  [Depression_Indicator]_subpop_2 - [Depression_Indicator]_subpop_3 = 0
+
+------------------------------------------------------------------------------
+        Mean |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |  -.8307215   1.047044    -0.79   0.434     -2.96907    1.307627
+------------------------------------------------------------------------------
+
+. lincom [Depression_Indicator]_subpop_4 - [Depression_Indicator]_subpop_5 // 20-39 vs. 40-59       : women
+
+ ( 1)  [Depression_Indicator]_subpop_4 - [Depression_Indicator]_subpop_5 = 0
+
+------------------------------------------------------------------------------
+        Mean |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |  -1.426917   1.504682    -0.95   0.351    -4.499887    1.646052
+------------------------------------------------------------------------------
+
+. lincom [Depression_Indicator]_subpop_4 - [Depression_Indicator]_subpop_6 // 20-39 vs. 60 and over : women
+
+ ( 1)  [Depression_Indicator]_subpop_4 - [Depression_Indicator]_subpop_6 = 0
+
+------------------------------------------------------------------------------
+        Mean |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |   .4703981   1.480941     0.32   0.753    -2.554088    3.494884
+------------------------------------------------------------------------------
+
+. lincom [Depression_Indicator]_subpop_5 - [Depression_Indicator]_subpop_6 // 40-59 vs. 60 and over : women
+
+ ( 1)  [Depression_Indicator]_subpop_5 - [Depression_Indicator]_subpop_6 = 0
+
+------------------------------------------------------------------------------
+        Mean |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |   1.897315   1.514131     1.25   0.220    -1.194953    4.989584
+------------------------------------------------------------------------------
+
+. 
+. ************************************************************
+. 
+. ** Alternative method of testing: pairwise comparisons on a "cell means model" from the reg command **
+. 
+. ** Prevalence By Gender And Age Group **
+. * specify ibn. for each factor variable and the noconstant option to include all levels of categorical variables in the model *
+. svy, subpop(inAnalysis): reg Depression_Indicator ibn.Age_Group#ibn.riagendr, noconstant
+(running regress on estimation sample)
+
+Survey: Linear regression
+
+Number of strata   =        30                Number of obs     =       20,146
+Number of PSUs     =        60                Population size   =  313,842,630
+                                              Subpop. no. obs   =        9,942
+                                              Subpop. size      =  212,597,653
+                                              Design df         =           30
+                                              F(   6,     25)   =        89.40
+                                              Prob > F          =       0.0000
+                                              R-squared         =       0.0884
+
+------------------------------------------------------------------------------------
+                   |             Linearized
+Depression_Indic~r |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------------+----------------------------------------------------------------
+Age_Group#riagendr |
+       20-39#Male  |   5.513778   .6461045     8.53   0.000     4.194256    6.833299
+     20-39#Female  |   10.05032   .8036891    12.51   0.000     8.408969    11.69167
+       40-59#Male  |    5.22206   .7699895     6.78   0.000     3.649532    6.794589
+     40-59#Female  |   11.47724   1.201136     9.56   0.000     9.024191    13.93029
+         60+#Male  |   6.052782   .8295114     7.30   0.000     4.358693     7.74687
+       60+#Female  |   9.579923   1.053411     9.09   0.000      7.42857    11.73128
+------------------------------------------------------------------------------------
+
+. 
+. ** Pairwise comparison of age groups, among men (riagendr=1) and women (riagendr=2) **
+. pwcompare Age_Group#1.riagendr, pveffects
+
+Pairwise comparisons of marginal linear predictions
+
+                                                Design df         =         30
+
+Margins      : asbalanced
+
+----------------------------------------------------------------------
+                              |                            Unadjusted
+                              |   Contrast   Std. Err.      t    P>|t|
+------------------------------+---------------------------------------
+           Age_Group#riagendr |
+(40-59#Male) vs (20-39#Male)  |  -.2917174   1.100145    -0.27   0.793
+  (60+#Male) vs (20-39#Male)  |   .5390041   .9994691     0.54   0.594
+  (60+#Male) vs (40-59#Male)  |   .8307215   1.047044     0.79   0.434
+----------------------------------------------------------------------
+
+. pwcompare Age_Group#2.riagendr, pveffects
+
+Pairwise comparisons of marginal linear predictions
+
+                                                Design df         =         30
+
+Margins      : asbalanced
+
+--------------------------------------------------------------------------
+                                  |                            Unadjusted
+                                  |   Contrast   Std. Err.      t    P>|t|
+----------------------------------+---------------------------------------
+               Age_Group#riagendr |
+(40-59#Female) vs (20-39#Female)  |   1.426917   1.504682     0.95   0.351
+  (60+#Female) vs (20-39#Female)  |  -.4703981   1.480941    -0.32   0.753
+  (60+#Female) vs (40-59#Female)  |  -1.897315   1.514131    -1.25   0.220
+--------------------------------------------------------------------------
+
+. 
+. ** Pairwise comparison by gender, for each age group *;
+. pwcompare riagendr#1.Age_Group, pveffects
+
+Pairwise comparisons of marginal linear predictions
+
+                                                Design df         =         30
+
+Margins      : asbalanced
+
+------------------------------------------------------------------------
+                                |                            Unadjusted
+                                |   Contrast   Std. Err.      t    P>|t|
+--------------------------------+---------------------------------------
+             riagendr#Age_Group |
+(Female#20-39) vs (Male#20-39)  |   4.536543   1.016958     4.46   0.000
+------------------------------------------------------------------------
+
+. pwcompare riagendr#2.Age_Group, pveffects
+
+Pairwise comparisons of marginal linear predictions
+
+                                                Design df         =         30
+
+Margins      : asbalanced
+
+------------------------------------------------------------------------
+                                |                            Unadjusted
+                                |   Contrast   Std. Err.      t    P>|t|
+--------------------------------+---------------------------------------
+             riagendr#Age_Group |
+(Female#40-59) vs (Male#40-59)  |   6.255178   1.616821     3.87   0.001
+------------------------------------------------------------------------
+
+. pwcompare riagendr#3.Age_Group, pveffects
+
+Pairwise comparisons of marginal linear predictions
+
+                                                Design df         =         30
+
+Margins      : asbalanced
+
+--------------------------------------------------------------------
+                            |                            Unadjusted
+                            |   Contrast   Std. Err.      t    P>|t|
+----------------------------+---------------------------------------
+         riagendr#Age_Group |
+(Female#60+) vs (Male#60+)  |   3.527141   1.127535     3.13   0.004
+--------------------------------------------------------------------
